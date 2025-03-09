@@ -1,4 +1,5 @@
 <!DOCTYPE html><html lang="zh-CN"><head><meta http-equiv="Content-Security-Policy" content="default-src 'self' 'unsafe-inline' 'unsafe-eval' data: blob: https://cdnjs.cloudflare.com https://cdn.jsdelivr.net https://code.jquery.com https://unpkg.com https://d3js.org https://threejs.org https://cdn.plot.ly https://stackpath.bootstrapcdn.com https://maps.googleapis.com https://cdn.tailwindcss.com https://ajax.googleapis.com https://kit.fontawesome.com https://cdn.datatables.net https://maxcdn.bootstrapcdn.com https://code.highcharts.com https://tako-static-assets-production.s3.amazonaws.com https://www.youtube.com https://fonts.googleapis.com https://fonts.gstatic.com https://pfst.cf2.poecdn.net https://puc.poecdn.net https://i.imgur.com https://wikimedia.org https://*.icons8.com https://*.giphy.com https://picsum.photos https://images.unsplash.com; frame-src 'self' https://www.youtube.com https://trytako.com; child-src 'self'; manifest-src 'self'; worker-src 'self'; upgrade-insecure-requests; block-all-mixed-content;">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self' 'unsafe-inline' 'unsafe-eval' data: blob: https://cdnjs.cloudflare.com https://cdn.jsdelivr.net https://code.jquery.com https://unpkg.com https://d3js.org https://threejs.org https://cdn.plot.ly https://stackpath.bootstrapcdn.com https://maps.googleapis.com https://cdn.tailwindcss.com https://ajax.googleapis.com https://kit.fontawesome.com https://cdn.datatables.net https://maxcdn.bootstrapcdn.com https://code.highcharts.com https://tako-static-assets-production.s3.amazonaws.com https://www.youtube.com https://fonts.googleapis.com https://fonts.gstatic.com https://pfst.cf2.poecdn.net https://puc.poecdn.net https://i.imgur.com https://wikimedia.org https://*.icons8.com https://*.giphy.com https://picsum.photos https://images.unsplash.com; frame-src 'self' https://www.youtube.com https://trytako.com; child-src 'self'; manifest-src 'self'; worker-src 'self'; upgrade-insecure-requests; block-all-mixed-content;">
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>热区位置调整工具</title>
@@ -28,6 +29,34 @@
       text-align: center;
       margin-bottom: 20px;
       color: #333;
+    }
+    
+    .controls {
+      margin-bottom: 20px;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      justify-content: center;
+      align-items: center;
+    }
+    
+    button, input[type="file"] {
+      padding: 8px 16px;
+      background-color: #5D5CDE;
+      color: white;
+      border: none;
+      border-radius: 6px;
+      font-size: 14px;
+      cursor: pointer;
+      transition: background-color 0.2s;
+    }
+    
+    button:hover, input[type="file"]:hover {
+      background-color: #4a49b8;
+    }
+    
+    input[type="file"] {
+      background-color: #4a49b8;
     }
     
     .image-container {
@@ -74,29 +103,6 @@
       z-index: 101;
     }
     
-    .controls {
-      margin-bottom: 20px;
-      display: flex;
-      flex-wrap: wrap;
-      gap: 10px;
-      justify-content: center;
-    }
-    
-    button {
-      padding: 8px 16px;
-      background-color: #5D5CDE;
-      color: white;
-      border: none;
-      border-radius: 6px;
-      font-size: 14px;
-      cursor: pointer;
-      transition: background-color 0.2s;
-    }
-    
-    button:hover {
-      background-color: #4a49b8;
-    }
-    
     .results {
       margin-top: 30px;
       background-color: #f5f5f7;
@@ -133,9 +139,12 @@
       <button id="toggle-hotspots">显示/隐藏热区</button>
       <button id="get-positions">获取位置代码</button>
       <button id="reset-positions">重置位置</button>
+      <!-- 新增上传图片控件 -->
+      <input type="file" id="uploadImage" accept="image/*">
     </div>
     
     <div class="image-container" id="image-container">
+      <!-- 默认背景图片，也可以通过上传图片后动态替换 -->
       <img src="huawei-mate70.jpg" alt="华为Mate70系列" class="bg-image" id="bg-image">
       <!-- 热区将动态添加到这里 -->
     </div>
@@ -165,6 +174,7 @@
       const getPositionsBtn = document.getElementById('get-positions');
       const resetPositionsBtn = document.getElementById('reset-positions');
       const positionCode = document.getElementById('position-code');
+      const uploadImageInput = document.getElementById('uploadImage');
       
       let hotspotsVisible = true;
       let activeHotspot = null;
@@ -243,7 +253,7 @@
         });
       }
       
-      // 鼠标移动处理 - 拖动/调整大小
+      // 鼠标移动处理 - 拖动或调整大小
       function onMouseMove(e) {
         if (!activeHotspot) return;
         
@@ -277,7 +287,7 @@
         }
       }
       
-      // 鼠标放开处理 - 结束拖动
+      // 鼠标释放停止拖动或调整大小
       function onMouseUp() {
         activeHotspot = null;
         document.removeEventListener('mousemove', onMouseMove);
@@ -315,8 +325,20 @@
         positionCode.textContent = code;
       });
       
-      // 重置位置
+      // 重置热区位置
       resetPositionsBtn.addEventListener('click', resetHotspots);
+      
+      // 上传图片处理
+      uploadImageInput.addEventListener('change', function(event) {
+        const file = event.target.files[0];
+        if (file) {
+          const reader = new FileReader();
+          reader.onload = function(e) {
+            bgImage.src = e.target.result;
+          };
+          reader.readAsDataURL(file);
+        }
+      });
       
       // 加载图片后再初始化热区
       bgImage.addEventListener('load', function() {
