@@ -1,0 +1,334 @@
+<!DOCTYPE html><html lang="zh-CN"><head><meta http-equiv="Content-Security-Policy" content="default-src 'self' 'unsafe-inline' 'unsafe-eval' data: blob: https://cdnjs.cloudflare.com https://cdn.jsdelivr.net https://code.jquery.com https://unpkg.com https://d3js.org https://threejs.org https://cdn.plot.ly https://stackpath.bootstrapcdn.com https://maps.googleapis.com https://cdn.tailwindcss.com https://ajax.googleapis.com https://kit.fontawesome.com https://cdn.datatables.net https://maxcdn.bootstrapcdn.com https://code.highcharts.com https://tako-static-assets-production.s3.amazonaws.com https://www.youtube.com https://fonts.googleapis.com https://fonts.gstatic.com https://pfst.cf2.poecdn.net https://puc.poecdn.net https://i.imgur.com https://wikimedia.org https://*.icons8.com https://*.giphy.com https://picsum.photos https://images.unsplash.com; frame-src 'self' https://www.youtube.com https://trytako.com; child-src 'self'; manifest-src 'self'; worker-src 'self'; upgrade-insecure-requests; block-all-mixed-content;">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>热区位置调整工具</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+      font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue", Arial, sans-serif;
+    }
+    
+    body {
+      padding: 20px;
+      background-color: #f5f5f7;
+    }
+    
+    .container {
+      max-width: 1300px;
+      margin: 0 auto;
+      background-color: white;
+      border-radius: 12px;
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+      padding: 30px;
+    }
+    
+    h1 {
+      text-align: center;
+      margin-bottom: 20px;
+      color: #333;
+    }
+    
+    .image-container {
+      position: relative;
+      margin-bottom: 30px;
+      overflow: hidden;
+      border-radius: 8px;
+      border: 1px solid #ddd;
+    }
+    
+    .bg-image {
+      width: 100%;
+      display: block;
+    }
+    
+    .hotspot {
+      position: absolute;
+      border: 2px solid #FF3B30;
+      background-color: rgba(255, 59, 48, 0.2);
+      cursor: move;
+      z-index: 100;
+    }
+    
+    .hotspot-label {
+      position: absolute;
+      top: 0;
+      left: 0;
+      background-color: #FF3B30;
+      color: white;
+      font-size: 12px;
+      padding: 2px 6px;
+      white-space: nowrap;
+      border-bottom-right-radius: 6px;
+    }
+    
+    .resize-handle {
+      position: absolute;
+      width: 12px;
+      height: 12px;
+      background-color: #FF3B30;
+      bottom: 0;
+      right: 0;
+      cursor: nwse-resize;
+      z-index: 101;
+    }
+    
+    .controls {
+      margin-bottom: 20px;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      justify-content: center;
+    }
+    
+    button {
+      padding: 8px 16px;
+      background-color: #5D5CDE;
+      color: white;
+      border: none;
+      border-radius: 6px;
+      font-size: 14px;
+      cursor: pointer;
+      transition: background-color 0.2s;
+    }
+    
+    button:hover {
+      background-color: #4a49b8;
+    }
+    
+    .results {
+      margin-top: 30px;
+      background-color: #f5f5f7;
+      border-radius: 8px;
+      padding: 20px;
+    }
+    
+    .results h2 {
+      margin-bottom: 15px;
+      color: #333;
+      font-size: 18px;
+    }
+    
+    pre {
+      background-color: #2c2c2e;
+      color: #f2f2f7;
+      padding: 15px;
+      border-radius: 6px;
+      overflow-x: auto;
+      font-family: monospace;
+      white-space: pre-wrap;
+    }
+    
+    .original-code {
+      margin-top: 30px;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>华为Mate70系列热区位置调整工具</h1>
+    
+    <div class="controls">
+      <button id="toggle-hotspots">显示/隐藏热区</button>
+      <button id="get-positions">获取位置代码</button>
+      <button id="reset-positions">重置位置</button>
+    </div>
+    
+    <div class="image-container" id="image-container">
+      <img src="huawei-mate70.jpg" alt="华为Mate70系列" class="bg-image" id="bg-image">
+      <!-- 热区将动态添加到这里 -->
+    </div>
+    
+    <div class="results" id="results">
+      <h2>热区位置信息</h2>
+      <pre id="position-code">// 调整热区位置后点击"获取位置代码"按钮</pre>
+    </div>
+  </div>
+  
+  <script>
+    document.addEventListener('DOMContentLoaded', function() {
+      // 热区初始位置（从原始代码复制）
+      const hotspotData = [
+        { id: 'editable-logo', label: 'Logo', left: '83.1267%', top: '3.7604%', width: '14.603%', height: '8.95727%' },
+        { id: 'editable-slogan', label: '产品传播名', left: '65%', top: '30%', width: '32%', height: '10%' },
+        { id: 'editable-xmage', label: 'XMAGE字标', left: '85%', top: '33.5%', width: '7%', height: '3%' },
+        { id: 'slogan-area', label: 'SLOGAN', left: '65%', top: '39%', width: '32%', height: '10%' },
+        { id: 'editable-feature-text', label: '卖点KSP', left: '65%', top: '48%', width: '32%', height: '5%' },
+        { id: 'editable-hotspot-1', label: 'HOS标志', left: '83%', top: '67%', width: '14%', height: '5%' },
+        { id: 'editable-hotspot-2', label: 'Disclaimer', left: '75%', top: '74%', width: '24%', height: '5%' }
+      ];
+      
+      const imageContainer = document.getElementById('image-container');
+      const bgImage = document.getElementById('bg-image');
+      const toggleHotspotsBtn = document.getElementById('toggle-hotspots');
+      const getPositionsBtn = document.getElementById('get-positions');
+      const resetPositionsBtn = document.getElementById('reset-positions');
+      const positionCode = document.getElementById('position-code');
+      
+      let hotspotsVisible = true;
+      let activeHotspot = null;
+      let startX, startY, startLeft, startTop, startWidth, startHeight;
+      let resizing = false;
+      
+      // 创建热区
+      function createHotspots() {
+        hotspotData.forEach((data) => {
+          const hotspot = document.createElement('div');
+          hotspot.className = 'hotspot';
+          hotspot.id = data.id;
+          hotspot.style.left = data.left;
+          hotspot.style.top = data.top;
+          hotspot.style.width = data.width;
+          hotspot.style.height = data.height;
+          
+          const label = document.createElement('div');
+          label.className = 'hotspot-label';
+          label.textContent = data.label;
+          hotspot.appendChild(label);
+          
+          const resizeHandle = document.createElement('div');
+          resizeHandle.className = 'resize-handle';
+          hotspot.appendChild(resizeHandle);
+          
+          imageContainer.appendChild(hotspot);
+        });
+      }
+      
+      // 移除所有热区
+      function removeHotspots() {
+        document.querySelectorAll('.hotspot').forEach(hotspot => {
+          hotspot.remove();
+        });
+      }
+      
+      // 重置热区位置
+      function resetHotspots() {
+        removeHotspots();
+        createHotspots();
+        setupDragHandlers();
+      }
+      
+      // 设置拖动调整功能
+      function setupDragHandlers() {
+        const hotspots = document.querySelectorAll('.hotspot');
+        
+        hotspots.forEach(hotspot => {
+          // 开始拖动/调整大小
+          hotspot.addEventListener('mousedown', function(e) {
+            if (e.target.className === 'resize-handle') {
+              resizing = true;
+            } else if (e.target.className !== 'hotspot-label') {
+              resizing = false;
+            } else {
+              return; // 点击标签时不做处理
+            }
+            
+            e.preventDefault();
+            activeHotspot = this;
+            
+            const rect = activeHotspot.getBoundingClientRect();
+            const containerRect = imageContainer.getBoundingClientRect();
+            
+            startX = e.clientX;
+            startY = e.clientY;
+            startLeft = rect.left - containerRect.left;
+            startTop = rect.top - containerRect.top;
+            startWidth = rect.width;
+            startHeight = rect.height;
+            
+            document.addEventListener('mousemove', onMouseMove);
+            document.addEventListener('mouseup', onMouseUp);
+          });
+        });
+      }
+      
+      // 鼠标移动处理 - 拖动/调整大小
+      function onMouseMove(e) {
+        if (!activeHotspot) return;
+        
+        const containerRect = imageContainer.getBoundingClientRect();
+        const containerWidth = containerRect.width;
+        const containerHeight = containerRect.height;
+        
+        if (resizing) {
+          // 调整大小
+          const newWidth = Math.max(30, startWidth + (e.clientX - startX));
+          const newHeight = Math.max(20, startHeight + (e.clientY - startY));
+          
+          const widthPercent = (newWidth / containerWidth * 100).toFixed(2) + '%';
+          const heightPercent = (newHeight / containerHeight * 100).toFixed(2) + '%';
+          
+          activeHotspot.style.width = widthPercent;
+          activeHotspot.style.height = heightPercent;
+        } else {
+          // 移动位置
+          const dx = e.clientX - startX;
+          const dy = e.clientY - startY;
+          
+          const newLeft = Math.max(0, Math.min(containerWidth - startWidth, startLeft + dx));
+          const newTop = Math.max(0, Math.min(containerHeight - startHeight, startTop + dy));
+          
+          const leftPercent = (newLeft / containerWidth * 100).toFixed(2) + '%';
+          const topPercent = (newTop / containerHeight * 100).toFixed(2) + '%';
+          
+          activeHotspot.style.left = leftPercent;
+          activeHotspot.style.top = topPercent;
+        }
+      }
+      
+      // 鼠标放开处理 - 结束拖动
+      function onMouseUp() {
+        activeHotspot = null;
+        document.removeEventListener('mousemove', onMouseMove);
+        document.removeEventListener('mouseup', onMouseUp);
+      }
+      
+      // 生成热区位置代码
+      function generatePositionCode() {
+        const hotspots = document.querySelectorAll('.hotspot');
+        let code = '<!-- 热区位置代码 -->\n';
+        
+        hotspots.forEach(hotspot => {
+          code += `<div class="highlight-area" id="${hotspot.id}" style="left: ${hotspot.style.left}; top: ${hotspot.style.top}; width: ${hotspot.style.width}; height: ${hotspot.style.height};">\n`;
+          code += `  <div class="highlight-label">${hotspot.querySelector('.hotspot-label').textContent}</div>\n`;
+          code += `</div>\n\n`;
+        });
+        
+        return code;
+      }
+      
+      // 切换显示/隐藏热区
+      toggleHotspotsBtn.addEventListener('click', function() {
+        hotspotsVisible = !hotspotsVisible;
+        
+        document.querySelectorAll('.hotspot').forEach(hotspot => {
+          hotspot.style.display = hotspotsVisible ? 'block' : 'none';
+        });
+        
+        this.textContent = hotspotsVisible ? '隐藏热区' : '显示热区';
+      });
+      
+      // 获取位置代码
+      getPositionsBtn.addEventListener('click', function() {
+        const code = generatePositionCode();
+        positionCode.textContent = code;
+      });
+      
+      // 重置位置
+      resetPositionsBtn.addEventListener('click', resetHotspots);
+      
+      // 加载图片后再初始化热区
+      bgImage.addEventListener('load', function() {
+        resetHotspots();
+      });
+      
+      // 如果图片已加载，直接初始化
+      if (bgImage.complete) {
+        resetHotspots();
+      }
+    });
+  </script>
+
+
+</body></html>
